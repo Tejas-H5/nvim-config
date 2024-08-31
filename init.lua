@@ -2,8 +2,12 @@
 -- Then, I made a couple of minor changes. It's working quite well so far, actually
 
 -- Some basic git commands. IDK how to make keybinds, but it's fairly easy to just make commands so I'm doing that
-vim.api.nvim_create_user_command("DiffH", ":Gvdiffsplit! HEAD", { desc = "View the git diff of this file vs the current HEAD" })
-vim.api.nvim_create_user_command("DiffS", ":Gvdiffsplit", { desc = "View the git diff of this file vs what we have staged" })
+-- vim.api.nvim_create_user_command("DiffH", ":Gvdiffsplit! HEAD", { desc = "View the git diff of this file vs the current HEAD" })
+-- vim.api.nvim_create_user_command("DiffS", ":Gvdiffsplit!", { desc = "View the git diff of this file vs what we have staged" })
+vim.api.nvim_create_user_command("Diff",  ":Gvdiffsplit! <args>", { desc = "View the git diff of this file vs what we have staged", nargs=1 })
+-- Need to see the context with the changes imo
+vim.opt.diffopt:append 'context:500'
+
 
 --
 -- Set <space> as the leader key
@@ -30,6 +34,8 @@ vim.opt.breakindent = true
 vim.opt.undofile = false 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
+vim.opt.synmaxcol = 300
+vim.opt.wrap = false
 
 -- Keep signcolumn on by default
 vim.opt.signcolumn = "yes"
@@ -39,7 +45,7 @@ vim.opt.updatetime = 250
 
 -- Decrease mapped sequence wait time
 -- Displays which-key popup sooner
-vim.opt.timeoutlen = 300
+vim.opt.timeoutlen = 2000
 
 -- Configure how new splits should be opened
 vim.opt.splitright = true
@@ -200,20 +206,12 @@ require("lazy").setup({
         end
 
         -- Navigation - it looks like these two allow us to move between changes
-        map('n', ']c', function()
-          if vim.wo.diff then
-            vim.cmd.normal({']c', bang = true})
-          else
-            gitsigns.nav_hunk('next')
-          end
+        map('n', '<F7>', function()
+          gitsigns.next_hunk()
         end, "Next [c]ange")
 
-        map('n', '[c', function()
-          if vim.wo.diff then
-            vim.cmd.normal({'[c', bang = true})
-          else
-            gitsigns.nav_hunk('prev')
-          end
+        map('n', '<S-F7>', function()
+          gitsigns.prev_hunk()
         end, "Previous [c]ange")
 
         map('n', '<leader>hd', gitsigns.diffthis, "[H]unk [D]iff current")
