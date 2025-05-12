@@ -1,5 +1,5 @@
 -- NOTE: I got this config from https://github.com/nvim-lua/kickstart.nvim
--- Then, I made a couple of minor changes. It's working quite well so far, actually
+-- Then, I made quite a few changes. It is quite a bit different now
 
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader        = " "
@@ -245,43 +245,41 @@ require("lazy").setup({
             },
           },
         },
+        -- https://github.com/neovim/nvim-lspconfig/blob/master/lsp/ts_ls.lua
+        ts_ls  = {
+          on_attach = function(client)
+            -- ts_ls provides `source.*` code actions that apply to the whole file. These only appear in
+            -- `vim.lsp.buf.code_action()` if specified in `context.only`.
+            vim.api.nvim_buf_create_user_command(0, 'TSActions', function()
+              local source_actions = vim.tbl_filter(function(action)
+                return vim.startswith(action, 'source.')
+              end, client.server_capabilities.codeActionProvider.codeActionKinds)
+
+              vim.lsp.buf.code_action({
+                context = {
+                  only = source_actions,
+                },
+              })
+            end, { desc = "View all typescript file actions"})
+
+            vim.api.nvim_buf_create_user_command(0, 'OrganizeImports', function()
+              vim.lsp.buf.execute_command({command = "_typescript.organizeImports", arguments = {vim.fn.expand("%:p")}})
+            end, { desc = "Organize imports (TypeScript)"})
+          end
+        }
       }
 
-      require("mason").setup()
+      -- Mason assumes that we use vim.lsp.config to configure our LSPs.
+      for k in pairs(servers) do
+          local server = servers[k]
+          server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
 
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        "stylua", -- Used to format Lua code
-      })
-      require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
-      require("mason-lspconfig").setup({
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for tsserver)
-            server.capabilities = vim.tbl_deep_extend("force", {}, capabilities, server.capabilities or {})
-            require("lspconfig")[server_name].setup(server)
-          end,
-          ["tsserver"] = function()
-            require("lspconfig").tsserver.setup({
-              commands = {
-                OrganizeImports = {
-                  function()
-                    vim.lsp.buf.execute_command({
-                      command = "_typescript.organizeImports",
-                      arguments = { vim.api.nvim_buf_get_name(0) },
-                      title = "",
-                    })
-                  end,
-                  description = "Organize Imports",
-                },
-              },
-            })
-          end,
-        },
-      })
+          vim.lsp.config(k, server)
+      end
+
+      require("mason").setup()
+      require("mason-tool-installer").setup({  })
+      require("mason-lspconfig").setup({ ensure_installed = vim.tbl_keys(servers) })
     end,
   },
   { -- Autoformat
