@@ -73,6 +73,11 @@ require("lazy").setup({
         ":Gvdiffsplit! <args>",
         { desc = "View the git diff of this file vs what we have staged", nargs = 1 }
       )
+      vim.api.nvim_create_user_command(
+        "DH",
+        ":Gvdiffsplit! HEAD",
+        { desc = "Short for :Diff HEAD",  }
+      )
       -- Needed to see the context with the changes imo
       vim.opt.diffopt:append("context:500") 
     end
@@ -347,7 +352,8 @@ require("lazy").setup({
           end,
         },
         completion = { 
-          completeopt = "menu,menuone,noinsert"
+          completeopt = "menu,menuone,noinsert",
+          autocomplete = false
         },
 
         mapping = cmp.mapping.preset.insert({
@@ -393,17 +399,17 @@ require("lazy").setup({
     -- Make sure to load this before all the other start plugins.
     priority = 1000,
     -- Having all colourschemes enabled seems to not work
-    -- "folke/tokyonight.nvim",
+    "folke/tokyonight.nvim",
     -- "andreasvc/vim-256noir",
-    'datsfilipe/vesper.nvim',
+    -- 'datsfilipe/vesper.nvim',
     -- "ntk148v/komau.vim",
     -- "jaredgorski/Mies.vim",
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      -- vim.cmd.colorscheme("tokyonight-moon")
-      require("vesper").setup({
+      vim.cmd.colorscheme("tokyonight-night")
+      --[[ require("vesper").setup({
         transparent = false, -- Boolean: Sets the background to transparent
         italics = {
           comments = true, -- Boolean: Italicizes comments
@@ -411,17 +417,21 @@ require("lazy").setup({
           functions = false, -- Boolean: Italicizes functions
           strings = false,   -- Boolean: Italicizes strings
           variables = false, -- Boolean: Italicizes variables
+          ["@texcolors.diff.add"] = {}
         },
         overrides = {
           Comment = { fg = "#8EB7FF", italic = false },
+          ["@texcolors.diff.add"] = { bg="#00FF00" },
+          ["@texcolors.diff.delete"] = { fg="#FF0000" },
         },
-        palette_overrides = {}
-      })
-      vim.cmd.colorscheme("vesper")
+        palette_overrides = {
+        }
+      }) ]]
+      -- vim.cmd.colorscheme("vesper")
       -- vim.cmd.colorscheme("Mies")
       -- vim.opt.background = "light"
       -- vim.cmd.colorscheme("binary")
-      -- vim.cmd.hi("Identifier gui=none")
+      vim.cmd.hi("Comment gui=none")
     end,
   },
   { -- Collection of various small independent plugins/modules
@@ -491,6 +501,73 @@ require("lazy").setup({
       require("nvim-treesitter.configs").setup(opts)
     end,
   },
+  {
+    'stevearc/oil.nvim',
+    ---@module 'oil'
+    ---@type oil.SetupOpts
+    opts = {
+      delete_to_trash = true,
+      view_options = {
+        show_hidden = true
+      }
+    },
+    -- Optional dependencies
+    dependencies = { { "echasnovski/mini.icons", opts = {} } },
+    -- dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
+    -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
+    lazy = false,
+  },
+  {
+    "jake-stewart/multicursor.nvim",
+    branch = "1.0",
+    config = function()
+      local mc = require("multicursor-nvim")
+      mc.setup()
+
+      local set = vim.keymap.set
+
+      -- Add cursors below the main cursor.
+      -- Keep it simple, stupied !!!
+      set({"n", "x"}, "m", function() mc.lineAddCursor(1) end)
+      set({"n", "x"}, "<S-m>", function() mc.matchAddCursor(1) end)
+
+      -- Mappings defined in a keymap layer only apply when there are
+      -- multiple cursors. This lets you have overlapping mappings.
+      mc.addKeymapLayer(function(layerSet)
+        -- Align cursor columns.
+        set("n", "<leader>a", mc.alignCursors)
+
+        -- Disable and enable cursors.
+        set({"n", "x"}, "<c-q>", mc.toggleCursor)
+
+        -- Select a different cursor as the main one.
+        layerSet({"n", "x"}, "<left>", mc.prevCursor)
+        layerSet({"n", "x"}, "<right>", mc.nextCursor)
+
+        -- Delete the main cursor.
+        layerSet({"n", "x"}, "<leader>x", mc.deleteCursor)
+
+        -- Enable and clear cursors using escape.
+        layerSet("n", "<esc>", function()
+          if not mc.cursorsEnabled() then
+            mc.enableCursors()
+          else
+            mc.clearCursors()
+          end
+        end)
+      end)
+
+      -- Customize how cursors look.
+      local hl = vim.api.nvim_set_hl
+      hl(0, "MultiCursorCursor", { reverse = true })
+      hl(0, "MultiCursorVisual", { link = "Visual" })
+      hl(0, "MultiCursorSign", { link = "SignColumn"})
+      hl(0, "MultiCursorMatchPreview", { link = "Search" })
+      hl(0, "MultiCursorDisabledCursor", { reverse = true })
+      hl(0, "MultiCursorDisabledSign", { link = "SignColumn"})
+      hl(0, "MultiCursorDisabledVisual", { link = "Visual" })
+    end
+  }
 },
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
